@@ -1,0 +1,4 @@
+repository "Dice Throne Mobile@TaquitosDorados@cloud"
+  path "/"
+    br "/main"
+    co "/main"
