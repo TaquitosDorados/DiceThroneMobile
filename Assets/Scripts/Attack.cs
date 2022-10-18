@@ -77,8 +77,11 @@ public class Attack : MonoBehaviour
                 transform.position = initialPos;
                 transform.localScale = new Vector3(1f, 1f, 1f);
                 sprite.sortingOrder = initialSpritePos;
-                game.attackSelected = false;
-                game.myAttack = null;
+                if (game.myAttack == this)
+                {
+                    game.attackSelected = false;
+                    game.myAttack = null;
+                }
             }
         }
     }

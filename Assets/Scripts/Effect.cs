@@ -9,13 +9,14 @@ public class Effect : MonoBehaviour
     public int turnsLeft;
     public bool attackModifier;
     public bool defenseModifier;
-    public bool deBuffer;
+    public bool debuffer;
     public int maxNum = 1;
     static public int currentIndex;
 
     public GameObject reloadUI;
     public GameObject ninjutsuUI;
     public GameObject ninjutsuResultUI;
+    public GameObject EvasiveUI;
 
     private GameObject canvas;
     private GameManager game;
@@ -47,6 +48,7 @@ public class Effect : MonoBehaviour
                 Reload();
                 break;
             case 2:
+                Evasive();
                 break;
             case 3:
                 break;
@@ -163,6 +165,42 @@ public class Effect : MonoBehaviour
             game.HandleAttack(currentDmg,null,null,0,0,true);
         }
 
+    }
+
+    void Evasive()
+    {
+        Instantiate(EvasiveUI, canvas.transform);
+    }
+
+    public void EvasiveOpc(int opc)
+    {
+        game = FindObjectOfType<GameManager>();
+        if (opc == 1)
+        {
+            if (game.currentTurn == 2)
+            {
+                game.p1Effects.RemoveAt(currentIndex);
+            }
+            else
+            {
+                game.p2Effects.RemoveAt(currentIndex);
+            }
+            game.startEvasive(this);
+            KillMySelf(2);
+        }
+        else
+        {
+            game.checkForDefenseEffects(currentDmg);
+            game.currentIndex = currentIndex;
+        }
+    }
+
+    public void EvasiveResults(int result)
+    {
+        if(result < 3)
+            currentDmg = 0;
+        game = FindObjectOfType<GameManager>();
+        game.HandleAttack(currentDmg);
     }
 
     void KillMySelf(int _id)

@@ -7,6 +7,7 @@ public class GameManager : MonoBehaviour
 {
     public GameObject rollButton;
     public GameObject attackButton;
+    public GameObject endTurnButton;
 
     public int[] currentScores;
     public int tryiesLeft = 3;
@@ -86,6 +87,8 @@ public bool rollPhase = true;
         {
             attackButton.SetActive(false);
         }
+
+        
     }
 
     public void Roll()
@@ -98,7 +101,7 @@ public bool rollPhase = true;
                 currentDice[i].Roll();
             }
         }
-
+        endTurnButton.SetActive(false);
     }
 
     IEnumerator Rolling()
@@ -123,10 +126,13 @@ public bool rollPhase = true;
         {
             currentScores[currentDice[i].currentValue - 1]++; //Si el dado es un cuatro, sube score en pos 3 para saber que hay un 4
         }
+        if(rollPhase)
+        endTurnButton.SetActive(true);
     }
 
     public void changeTurns()
     {
+        endTurnButton.SetActive(false);
         currentlyUnblockable = false;
         currentIndex = -1;
         destroyCurrentDice();
@@ -251,6 +257,7 @@ public bool rollPhase = true;
         rollPhase = false;
         //attackSelected = false;
         attackButton.SetActive(false);
+        endTurnButton.SetActive(false);
     }
 
     public void HandleAttack(int dmg = 0, Effect[] effectMySelf = null, Effect[] effectOther = null, int numMyDice = 0, int numOthersDice = 0, bool isUnblockable = false)
@@ -286,8 +293,12 @@ public bool rollPhase = true;
         {
             Debug.Log("El atacante ha hecho" + dmg);
             if (dmg > 0)
-                //startDefense(dmg);
+            {
                 checkForAttackModifiers(dmg);
+            } else
+            {
+                endTurnButton.SetActive(true);
+            }
 
         }
     }
@@ -395,15 +406,54 @@ public bool rollPhase = true;
             }
         }
 
-        if (currentlyUnblockable)
+        /*if (currentlyUnblockable)
         {
             ApplyDamage(_currentdmg);
         }
         else
         {
             startDefense(_currentdmg);
+        }*/
+
+        checkForDefenseEffects(_currentdmg);
+
+    }
+
+    public void checkForDefenseEffects(int _currentDmg)
+    {
+        if (currentTurn == 2)
+        {
+            for (int i = currentIndex + 1; i < p1Effects.Count; i++)
+            {
+                if (p1Effects[i].defenseModifier)
+                {
+                    p1Effects[i].getEffect(_currentDmg, i);
+                    return;
+                }
+                currentIndex = i;
+            }
+        }
+        else
+        {
+            for (int i = currentIndex + 1; i < p2Effects.Count; i++)
+            {
+                if (p2Effects[i].defenseModifier)
+                {
+                    p2Effects[i].getEffect(_currentDmg, i);
+                    return;
+                }
+                currentIndex = i;
+            }
         }
 
+        if (currentlyUnblockable)
+        {
+            ApplyDamage(_currentDmg);
+        }
+        else
+        {
+            startDefense(_currentDmg);
+        }
     }
 
     IEnumerator RollForAttack(Attack myAttack, int numMyDice)
@@ -606,6 +656,8 @@ public bool rollPhase = true;
             p2Life -= attackerDMGReceived;
             p2LifeText.text = p2Life + " HP";
         }
+
+        endTurnButton.SetActive(true);
     }
 
     public void startReload(Effect myReload)
@@ -672,6 +724,39 @@ public bool rollPhase = true;
         Roll();
         yield return new WaitForSeconds(4.0f);
         myNinjutsu.NinjutsuResults(currentDice[0].currentValue);
+    }
+
+    public void startEvasive(Effect myEvasive)
+    {
+        StartCoroutine(evasive(myEvasive));
+    }
+
+    IEnumerator evasive(Effect myEvasive)
+    {
+        destroyCurrentDice();
+        yield return new WaitForSeconds(1.0f);
+        currentDice = new Dice[1];
+        for (int i = 0; i < currentDice.Length; i++)
+        {
+            if (currentTurn == 2)
+            {
+                var newDice = Instantiate(player1Dice);
+                newDice.transform.position = new Vector2(initialDicePos.position.x + (3.2f * i), initialDicePos.position.y);
+                newDice.GetComponent<SpriteRenderer>().sortingOrder = 8;
+                currentDice[i] = newDice;
+            }
+            else
+            {
+                var newDice = Instantiate(player2Dice);
+                newDice.transform.position = new Vector2(initialDicePos.position.x + (3.2f * i), initialDicePos.position.y);
+                newDice.GetComponent<SpriteRenderer>().sortingOrder = 8;
+                currentDice[i] = newDice;
+            }
+        }
+        yield return new WaitForSeconds(1.0f);
+        Roll();
+        yield return new WaitForSeconds(4.0f);
+        myEvasive.EvasiveResults(currentDice[0].currentValue);
     }
 
     void destroyCurrentDice()
