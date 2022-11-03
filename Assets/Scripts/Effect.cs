@@ -11,12 +11,16 @@ public class Effect : MonoBehaviour
     public bool defenseModifier;
     public bool debuffer;
     public int maxNum = 1;
-    static public int currentIndex;
+    static public int currentIndexAttack;
+    static public int currentIndexDefence;
 
     public GameObject reloadUI;
     public GameObject ninjutsuUI;
     public GameObject ninjutsuResultUI;
     public GameObject EvasiveUI;
+    public GameObject SmokeBombUI;
+
+    public Effect[] inflictEffect;
 
     private GameObject canvas;
     private GameManager game;
@@ -34,6 +38,34 @@ public class Effect : MonoBehaviour
 
         if (turnsLeft == 0)
         {
+            if (game.currentTurn == 1)
+            {
+                for(int i = 0; i < game.p1Effects.Count; i++)
+                {
+                    if (game.p1Effects[i].ID == ID)
+                    {
+                        game.p1Effects.RemoveAt(i);
+                        i=game.p1Effects.Count;
+                    }
+                }
+            } else
+            {
+                for (int i = 0; i < game.p2Effects.Count; i++)
+                {
+                    if (game.p2Effects[i].ID == ID)
+                    {
+                        game.p2Effects.RemoveAt(i);
+                        i = game.p2Effects.Count;
+                    }
+                }
+            }
+
+
+            if (ID == 7)
+            {
+                game.ApplyDamage(0, 3);
+            }
+
             Destroy(gameObject);
         }
     }
@@ -41,23 +73,30 @@ public class Effect : MonoBehaviour
     public void getEffect(int _currentDmg, int newIndex)
     {
         currentDmg = _currentDmg;
-        currentIndex = newIndex;
         switch (ID)
         {
             case 1:
+                currentIndexAttack = newIndex;
                 Reload();
                 break;
             case 2:
+                currentIndexDefence = newIndex;
                 Evasive();
                 break;
             case 3:
+                currentIndexDefence = newIndex;
+                Bounty();
                 break;
             case 4:
+                KnockDown();
                 break;
             case 5:
+                currentIndexAttack = newIndex;
                 Ninjutsu();
                 break;
             case 6:
+                currentIndexDefence = newIndex;
+                SmokeBomb();
                 break;
             case 7:
                 break;
@@ -76,18 +115,18 @@ public class Effect : MonoBehaviour
         {
             if (game.currentTurn == 1)
             {
-                game.p1Effects.RemoveAt(currentIndex);
+                game.p1Effects.RemoveAt(currentIndexAttack);
             }
             else
             {
-                game.p2Effects.RemoveAt(currentIndex);
+                game.p2Effects.RemoveAt(currentIndexAttack);
             }
             game.startReload(this);
             KillMySelf(1);
         } else
         {
             game.HandleAttack(currentDmg);
-            game.currentIndex = currentIndex;
+            game.currentIndexAttack = currentIndexAttack;
         }
     }
 
@@ -111,11 +150,11 @@ public class Effect : MonoBehaviour
         {
             if (game.currentTurn == 1)
             {
-                game.p1Effects.RemoveAt(currentIndex);
+                game.p1Effects.RemoveAt(currentIndexAttack);
             }
             else
             {
-                game.p2Effects.RemoveAt(currentIndex);
+                game.p2Effects.RemoveAt(currentIndexAttack);
             }
             game.startNinjutsu(this);
             KillMySelf(5);
@@ -123,7 +162,7 @@ public class Effect : MonoBehaviour
         else
         {
             game.HandleAttack(currentDmg);
-            game.currentIndex = currentIndex;
+            game.currentIndexAttack = currentIndexAttack;
         }
     }
 
@@ -158,8 +197,7 @@ public class Effect : MonoBehaviour
             game.HandleAttack(currentDmg);
         } else if (opc == 2)
         {
-            //INFLINGIR POISON!!!!
-            game.HandleAttack(currentDmg);
+            game.HandleAttack(currentDmg,null,inflictEffect);
         } else
         {
             game.HandleAttack(currentDmg,null,null,0,0,true);
@@ -179,11 +217,11 @@ public class Effect : MonoBehaviour
         {
             if (game.currentTurn == 2)
             {
-                game.p1Effects.RemoveAt(currentIndex);
+                game.p1Effects.RemoveAt(currentIndexDefence);
             }
             else
             {
-                game.p2Effects.RemoveAt(currentIndex);
+                game.p2Effects.RemoveAt(currentIndexDefence);
             }
             game.startEvasive(this);
             KillMySelf(2);
@@ -191,7 +229,7 @@ public class Effect : MonoBehaviour
         else
         {
             game.checkForDefenseEffects(currentDmg);
-            game.currentIndex = currentIndex;
+            game.currentIndexDefence = currentIndexDefence;
         }
     }
 
@@ -200,6 +238,54 @@ public class Effect : MonoBehaviour
         if(result < 3)
             currentDmg = 0;
         game = FindObjectOfType<GameManager>();
+        game.HandleAttack(currentDmg);
+    }
+
+    void SmokeBomb()
+    {
+        Instantiate(SmokeBombUI, canvas.transform);
+    }
+
+    public void SmokeBombOpc(int opc)
+    {
+        game = FindObjectOfType<GameManager>();
+        if (opc == 1)
+        {
+            if (game.currentTurn == 2)
+            {
+                game.p1Effects.RemoveAt(currentIndexDefence);
+            }
+            else
+            {
+                game.p2Effects.RemoveAt(currentIndexDefence);
+            }
+            game.startEvasive(this);
+            KillMySelf(6);
+        }
+        else
+        {
+            game.checkForDefenseEffects(currentDmg);
+            game.currentIndexDefence = currentIndexDefence;
+        }
+    }
+
+    public void SmokeBombResults(int result)
+    {
+        if (result < 4)
+            currentDmg = 0;
+        game = FindObjectOfType<GameManager>();
+        game.HandleAttack(currentDmg);
+    }
+
+    void KnockDown()
+    {
+        game.tryiesLeft = 0;
+    }
+
+    void Bounty()
+    {
+        currentDmg += 2;
+        game.currentIndexDefence = currentIndexDefence;
         game.HandleAttack(currentDmg);
     }
 

@@ -5,6 +5,7 @@ using UnityEngine;
 public class PlayerCard : MonoBehaviour
 {
     public int ID;
+    public GameObject anim;
     private BoxCollider2D box;
     private SelectFighters game;
     private SpriteRenderer sprite;
@@ -17,6 +18,7 @@ public class PlayerCard : MonoBehaviour
 
     private void OnMouseDown()
     {
+        Instantiate(anim);
         game.ChooseFighter(ID);
         box.enabled = false;
         sprite.color = new Color(0.5f, 0.5f, 0.5f);

@@ -7,11 +7,14 @@ public class Defense : MonoBehaviour
     public enum Character { Gunslinger, Ninja};
     public Character character;   
     public GameObject myOptions;
+    public Effect[] applySelf;
+    public Effect[] applyOther;
     
     private GameManager game;
     static private int dmgRecieved;
     private GameObject canvas;
     static private int returnDamage;
+    private bool givingSmoke;
 
     private void Awake()
     {
@@ -110,6 +113,7 @@ public class Defense : MonoBehaviour
         game = FindObjectOfType<GameManager>();
 
         returnDamage = 0;
+        givingSmoke = false;
         if (results[0] + results[1] + results[2] > 0)
         {
             returnDamage += 1;
@@ -120,8 +124,7 @@ public class Defense : MonoBehaviour
         }
         if (results[5] > 1)
         {
-            //PONER SMOKE BOMB
-            Debug.Log("Smoke Bomb");
+            givingSmoke = true;
         }
 
         if (game.tryiesLeft == 1)
@@ -144,6 +147,8 @@ public class Defense : MonoBehaviour
     public void NinjaAccept()
     {
         game = FindObjectOfType<GameManager>();
+        if (givingSmoke)
+            game.giveOtherEffect(applySelf[0]);
         game.ApplyDamage(dmgRecieved, returnDamage);
     }
 }

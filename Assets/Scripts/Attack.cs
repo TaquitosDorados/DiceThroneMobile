@@ -19,6 +19,8 @@ public class Attack : MonoBehaviour
     public int myRolledDice;
     public int enemyRolledDice;
     public bool unblockable;
+    public bool GSultimate;
+    public bool NJultimate;
     public Effect[] efectoEnMi;
     public Effect[] efectoEnOtro;
 
@@ -88,6 +90,17 @@ public class Attack : MonoBehaviour
 
     void checkActivation()
     {
+        if (game.currentScores[5]>4) //ULTIIIIIII
+        {
+            if (GSultimate)
+            {
+                game.HandleAttack(10, efectoEnMi, efectoEnOtro, 0, 0, false, true);
+            }
+            if (NJultimate)
+            {
+                game.HandleAttack(13, efectoEnMi, efectoEnOtro, 0, 0, false, true);
+            }
+        }
         if (smallStraight)
         {
             if(game.currentScores[0]>=1 && game.currentScores[1] >=1 && game.currentScores[2] >=1 && game.currentScores[3] >=1)

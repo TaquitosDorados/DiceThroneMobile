@@ -99,3 +99,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   character: 1
   myOptions: {fileID: 331746079284729465, guid: 02628da02562dd34aa4820bb33d200c7, type: 3}
+  applySelf:
+  - {fileID: 4938760225988811451, guid: fe286a0f449b9bc47a2c196cd0d44e07, type: 3}
+  applyOther: []

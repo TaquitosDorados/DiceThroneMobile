@@ -26,7 +26,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7201592439376956708}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -7.84, y: 3, z: 0}
+  m_LocalPosition: {x: -5.91, y: 3.77, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -101,8 +101,11 @@ MonoBehaviour:
   turnsLeft: -1
   attackModifier: 1
   defenseModifier: 0
-  deBuffer: 0
+  debuffer: 0
   maxNum: 2
   reloadUI: {fileID: 331746079284729465, guid: 9a11f58bb48c7284aaa03cc1536b74f8, type: 3}
   ninjutsuUI: {fileID: 0}
   ninjutsuResultUI: {fileID: 0}
+  EvasiveUI: {fileID: 0}
+  SmokeBombUI: {fileID: 0}
+  inflictEffect: []

@@ -114,6 +114,7 @@ MonoBehaviour:
   efectoEnMi:
   - {fileID: 8561115573561579666, guid: b52799a9be3515e4ab19d58bf0243ae6, type: 3}
   - {fileID: 8561115573561579666, guid: b52799a9be3515e4ab19d58bf0243ae6, type: 3}
+  - {fileID: 4938760225988811451, guid: fe286a0f449b9bc47a2c196cd0d44e07, type: 3}
   efectoEnOtro:
   - {fileID: 6358426737209186222, guid: a65fd47b6c6c022489ada6d33c01b02c, type: 3}
   especial: 0

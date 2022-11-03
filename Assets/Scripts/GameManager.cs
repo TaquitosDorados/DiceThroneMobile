@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -8,11 +9,15 @@ public class GameManager : MonoBehaviour
     public GameObject rollButton;
     public GameObject attackButton;
     public GameObject endTurnButton;
+    public GameObject shieldIcon;
+    public GameObject rollPhaseIcon;
+    public GameObject mainPanel;
 
     public int[] currentScores;
     public int tryiesLeft = 3;
 
-    public int currentIndex = -1;
+    public int currentIndexAttack = -1;
+    public int currentIndexDefence = -1;
 
     public int whoIsGS = 1; //NOMAS PA DARLE SU PASIVA
 
@@ -29,15 +34,22 @@ public class GameManager : MonoBehaviour
 
     public Transform initialDicePos;
     public Transform initialAttacksPos;
-public bool rollPhase = true;
+    public bool rollPhase = true;
     public bool attackSelected;
     public Attack myAttack;
 
+    public Text RollPhaseText;
     public Text p1LifeText;
     public Text p2LifeText;
+    public Text dmgText;
+    public Slider p1LifeBar;
+    public Slider p2LifeBar;
 
     public List<Effect> p1Effects;
     public List<Effect> p2Effects;
+
+    public Animator p1Anim;
+    public Animator p2Anim;
 
     [SerializeField] private Dice[] currentDice;
     [SerializeField] private Attack[] currentAttacks;
@@ -45,13 +57,15 @@ public bool rollPhase = true;
     public int currentTurn = 2;
     private Defense currentDefender;
     
-    [SerializeField]private bool currentlyUnblockable;
-    private int p1Life;
-    private int p2Life;
+    private bool currentlyUnblockable;
+    private bool currentlyUltimate;
+    [SerializeField]private int p1Life;
+    [SerializeField] private int p2Life;
 
     void Start()
     {
-        changeTurns();
+        currentTurn = PlayerPrefs.GetInt("P2char");
+        startChangeTurn();
         p1Life = 50;
         p2Life = 50;
         p1LifeText.text = p1Life + " HP";
@@ -63,11 +77,13 @@ public bool rollPhase = true;
         numSelected = 0;
         if (tryiesLeft > 0 && rollPhase)
         {
-
-            for (int i = 0; i < currentDice.Length; i++)
+            if (currentDice[0] != null)
             {
-                if (currentDice[i].selected)
-                    numSelected++;
+                for (int i = 0; i < currentDice.Length; i++)
+                {
+                    if (currentDice[i].selected)
+                        numSelected++;
+                }
             }
         }
 
@@ -104,6 +120,31 @@ public bool rollPhase = true;
         endTurnButton.SetActive(false);
     }
 
+    void checkForDebuffers()
+    {
+
+        if (currentTurn == 1)
+        {
+            for (int i = 0; i < p1Effects.Count; i++)
+            {
+                if (p1Effects[i].debuffer)
+                {
+                    p1Effects[i].getEffect(0, -1);
+                }
+            }
+        }
+        else
+        {
+            for (int i = 0; i < p2Effects.Count; i++)
+            {
+                if (p2Effects[i].debuffer)
+                {
+                    p2Effects[i].getEffect(0, -1);
+                }
+            }
+        }
+    }
+
     IEnumerator Rolling()
     {
         yield return new WaitForSeconds(2f);
@@ -117,6 +158,7 @@ public bool rollPhase = true;
 
         checkScores();
         tryiesLeft--;
+                checkForDebuffers();
     }
 
     void checkScores()
@@ -130,16 +172,48 @@ public bool rollPhase = true;
         endTurnButton.SetActive(true);
     }
 
-    public void changeTurns()
+    public void startChangeTurn()
     {
-        endTurnButton.SetActive(false);
+        StartCoroutine(changeTurns());
+
+    }
+
+    IEnumerator changeTurns()
+    {
+        dmgText.text = "";
+
+        currentlyUltimate = false;
         currentlyUnblockable = false;
-        currentIndex = -1;
+        currentIndexAttack = -1;
+        currentIndexDefence = -1;
         destroyCurrentDice();
+        destroyCurrentAttacks();
         if(currentDefender!=null)
             Destroy(currentDefender.gameObject);
         currentDefender = null;
         attackSelected = false;
+
+        EffectTurnPassed();
+
+        p1Anim.Play("Idle");
+        p2Anim.Play("Idle");
+
+        endTurnButton.SetActive(false);
+
+        rollPhaseIcon.SetActive(true);
+        if (currentTurn == 1)
+        {
+            RollPhaseText.text = "Player 2";
+        } else
+        {
+            RollPhaseText.text = "Player 1";
+        }
+        RollPhaseText.gameObject.SetActive(true);
+
+        yield return new WaitForSeconds(1.5f);
+
+        rollPhaseIcon.SetActive(false);
+        RollPhaseText.gameObject.SetActive(false);
 
         if (currentTurn == 1)
         {
@@ -148,14 +222,14 @@ public bool rollPhase = true;
             for (int i = 0; i < 5; i++)  //Spawnear Dados
             {
                 var newDice = Instantiate(player2Dice);
-                newDice.transform.position = new Vector2(initialDicePos.position.x + (3.2f * i), initialDicePos.position.y);
+                newDice.transform.position = new Vector2(initialDicePos.position.x + (3.0f * i), initialDicePos.position.y);
                 //Destroy(currentDice[i].gameObject);
                 currentDice[i] = newDice;
             }
 
-            float attackSpawnStep = 15f / ((player2Attacks.Length / 2f));
+            float attackSpawnStep = 15f / (((player2Attacks.Length-1) / 2f));
 
-            for (int i = 0; i < player2Attacks.Length; i++) //Spawnear Ataques
+            for (int i = 0; i < player2Attacks.Length-1; i++) //Spawnear Ataques
             {
                 var newAttacks = Instantiate(player2Attacks[i]);
 
@@ -170,9 +244,12 @@ public bool rollPhase = true;
                     newAttacks.GetComponent<SpriteRenderer>().sortingOrder = 3;
                 }
 
-                Destroy(currentAttacks[i].gameObject);
+                //Destroy(currentAttacks[i].gameObject);
                 currentAttacks[i] = newAttacks;
             }
+            var newAttack = Instantiate(player2Attacks[player2Attacks.Length - 1]);
+            //Destroy(currentAttacks[player2Attacks.Length - 1].gameObject);
+            currentAttacks[player2Attacks.Length - 1] = newAttack;
 
         } else if (currentTurn == 2)
         {
@@ -181,14 +258,14 @@ public bool rollPhase = true;
             for (int i = 0; i < 5; i++)//Spawnear Dados
             {
                 var newDice = Instantiate(player1Dice);
-                newDice.transform.position = new Vector2(initialDicePos.position.x + (3.2f * i), initialDicePos.position.y);
+                newDice.transform.position = new Vector2(initialDicePos.position.x + (3.0f * i), initialDicePos.position.y);
                 //Destroy(currentDice[i].gameObject);
                 currentDice[i] = newDice;
             }
 
-            float attackSpawnStep = 15f / ((player1Attacks.Length / 2f));
+            float attackSpawnStep = 15f / (((player1Attacks.Length-1) / 2f));
 
-            for (int i = 0; i < player1Attacks.Length; i++) //Spawnear Ataques
+            for (int i = 0; i < player1Attacks.Length-1; i++) //Spawnear Ataques
             {
                 var newAttacks = Instantiate(player1Attacks[i]);
 
@@ -203,9 +280,12 @@ public bool rollPhase = true;
                     newAttacks.GetComponent<SpriteRenderer>().sortingOrder = 3;
                 }
 
-                Destroy(currentAttacks[i].gameObject);
+                //Destroy(currentAttacks[i].gameObject);
                 currentAttacks[i] = newAttacks;
             }
+            var newAttack = Instantiate(player1Attacks[player1Attacks.Length - 1]);
+            //Destroy(currentAttacks[player1Attacks.Length - 1].gameObject);
+            currentAttacks[player1Attacks.Length - 1] = newAttack;
         }
 
         if(currentTurn == whoIsGS)
@@ -251,19 +331,40 @@ public bool rollPhase = true;
         tryiesLeft = 3;
     }
 
+    void EffectTurnPassed()
+    {
+        if (currentTurn == 1)
+        {
+            for (int i = 0; i < p1Effects.Count; i++)
+            {
+                p1Effects[i].TurnPassed();
+            }
+        }
+        else
+        {
+            for (int i = 0; i < p2Effects.Count; i++)
+            {
+                p2Effects[i].TurnPassed();
+            }
+        }
+    }
+
     public void getAttack()
     {
+        endTurnButton.SetActive(false);
         myAttack.SendAttack();
         rollPhase = false;
         //attackSelected = false;
-        attackButton.SetActive(false);
-        endTurnButton.SetActive(false);
+        attackButton.SetActive(false);    
     }
 
-    public void HandleAttack(int dmg = 0, Effect[] effectMySelf = null, Effect[] effectOther = null, int numMyDice = 0, int numOthersDice = 0, bool isUnblockable = false)
+    public void HandleAttack(int dmg = 0, Effect[] effectMySelf = null, Effect[] effectOther = null, int numMyDice = 0, int numOthersDice = 0, bool isUnblockable = false, bool ultimate = false)
     {
         if (isUnblockable)
         currentlyUnblockable = isUnblockable;
+
+        if(ultimate)
+            currentlyUltimate = ultimate;
         //DARME EL EFECTO
         if (effectMySelf != null)
         {
@@ -279,9 +380,15 @@ public bool rollPhase = true;
         {
             for (int i = 0; i < effectOther.Length; i++)
             {
-                giveMeEffect(effectOther[i]);
+                giveOtherEffect(effectOther[i]);
             }
         }
+
+
+            dmgText.text = "Current Dmg: " + dmg;
+            if(currentlyUnblockable)
+                dmgText.text += "\nUndefendable";
+        
 
         if (numMyDice > 0 && numOthersDice > 0) //Ambos tienen que tirar dados
         {
@@ -303,7 +410,7 @@ public bool rollPhase = true;
         }
     }
 
-    void giveMeEffect(Effect myEffect)
+    public void giveMeEffect(Effect myEffect)
     {
         if (currentTurn == 1)
         {
@@ -341,7 +448,7 @@ public bool rollPhase = true;
         }
     }
 
-    void giveOtherEffect(Effect myEffect)
+    public void giveOtherEffect(Effect myEffect)
     {
         if (currentTurn == 2)
         {
@@ -384,26 +491,28 @@ public bool rollPhase = true;
         Debug.Log("En check modifier" + _currentdmg);
         if (currentTurn == 1)
         {
-            for(int i = currentIndex+1; i < p1Effects.Count; i++)
+            for(int i = currentIndexAttack+1; i < p1Effects.Count; i++)
             {
                 if (p1Effects[i].attackModifier)
                 {
                     p1Effects[i].getEffect(_currentdmg, i);
                     return;
                 }
-                currentIndex = i;
+                currentIndexAttack = i;
             }
+            p1Anim.Play("Attack");
         } else
         {
-            for (int i = currentIndex+1; i < p2Effects.Count; i++)
+            for (int i = currentIndexAttack+1; i < p2Effects.Count; i++)
             {
                 if (p2Effects[i].attackModifier)
                 {
                     p2Effects[i].getEffect(_currentdmg, i);
                     return;
                 }
-                currentIndex = i;
+                currentIndexAttack = i;
             }
+            p2Anim.Play("Attack");
         }
 
         /*if (currentlyUnblockable)
@@ -414,37 +523,53 @@ public bool rollPhase = true;
         {
             startDefense(_currentdmg);
         }*/
+        currentIndexAttack = -1;
+        if (!currentlyUltimate)
+        {
+            StartCoroutine(DefenseAnim(_currentdmg));
+        } else
+        {
+            ApplyDamage(_currentdmg);
+        }
+    }
 
+    IEnumerator DefenseAnim(int _currentdmg)
+    {
+        shieldIcon.SetActive(true);
+        yield return new WaitForSeconds(1.5f);
+        shieldIcon.SetActive(false);
         checkForDefenseEffects(_currentdmg);
-
     }
 
     public void checkForDefenseEffects(int _currentDmg)
     {
+
         if (currentTurn == 2)
         {
-            for (int i = currentIndex + 1; i < p1Effects.Count; i++)
+            for (int i = currentIndexDefence + 1; i < p1Effects.Count; i++)
             {
                 if (p1Effects[i].defenseModifier)
                 {
                     p1Effects[i].getEffect(_currentDmg, i);
                     return;
                 }
-                currentIndex = i;
+                currentIndexDefence = i;
             }
         }
         else
         {
-            for (int i = currentIndex + 1; i < p2Effects.Count; i++)
+            for (int i = currentIndexDefence + 1; i < p2Effects.Count; i++)
             {
                 if (p2Effects[i].defenseModifier)
                 {
                     p2Effects[i].getEffect(_currentDmg, i);
                     return;
                 }
-                currentIndex = i;
+                currentIndexDefence = i;
             }
         }
+
+        currentIndexDefence = -1;
 
         if (currentlyUnblockable)
         {
@@ -466,14 +591,14 @@ public bool rollPhase = true;
             if (currentTurn == 1)
             {
                 var newDice = Instantiate(player1Dice);
-                newDice.transform.position = new Vector2(initialDicePos.position.x + (3.2f * i), initialDicePos.position.y);
+                newDice.transform.position = new Vector2(initialDicePos.position.x + (3.0f * i), initialDicePos.position.y);
                 newDice.GetComponent<SpriteRenderer>().sortingOrder = 8;
                 currentDice[i] = newDice;
             }
             else
             {
                 var newDice = Instantiate(player2Dice);
-                newDice.transform.position = new Vector2(initialDicePos.position.x + (3.2f * i), initialDicePos.position.y);
+                newDice.transform.position = new Vector2(initialDicePos.position.x + (3.0f * i), initialDicePos.position.y);
                 newDice.GetComponent<SpriteRenderer>().sortingOrder = 8;
                 currentDice[i] = newDice;
             }
@@ -502,14 +627,14 @@ public bool rollPhase = true;
             if (currentTurn == 2)
             {
                 var newDice = Instantiate(player1Dice);
-                newDice.transform.position = new Vector2(initialDicePos.position.x + (3.2f * i), initialDicePos.position.y);
+                newDice.transform.position = new Vector2(initialDicePos.position.x + (3.0f * i), initialDicePos.position.y);
                 newDice.GetComponent<SpriteRenderer>().sortingOrder = 8;
                 currentDice[i] = newDice;
             }
             else
             {
                 var newDice = Instantiate(player2Dice);
-                newDice.transform.position = new Vector2(initialDicePos.position.x + (3.2f * i), initialDicePos.position.y);
+                newDice.transform.position = new Vector2(initialDicePos.position.x + (3.0f * i), initialDicePos.position.y);
                 newDice.GetComponent<SpriteRenderer>().sortingOrder = 8;
                 currentDice[i] = newDice;
             }
@@ -536,7 +661,7 @@ public bool rollPhase = true;
         newDice.GetComponent<SpriteRenderer>().sortingOrder = 8;
         currentDice[0] = newDice;
         newDice = Instantiate(player2Dice);
-        newDice.transform.position = new Vector2(initialDicePos.position.x + 13, initialDicePos.position.y);
+        newDice.transform.position = new Vector2(initialDicePos.position.x + 12, initialDicePos.position.y);
         newDice.GetComponent<SpriteRenderer>().sortingOrder = 8;
         currentDice[1] = newDice;
 
@@ -623,17 +748,19 @@ public bool rollPhase = true;
 
         if (currentTurn == 1)
         {
-            myAttack.gameObject.transform.position = new Vector2(-4f, 0f);
+            myAttack.gameObject.transform.position = new Vector2(-2f, 0f);
+            myAttack.transform.localScale = new Vector3(0.8f, 0.8f, 0.8f);
             var inst = Instantiate(player2Defense);
-            inst.transform.position = new Vector2(4f, 0f);
-            inst.transform.localScale = new Vector3(1.2f, 1.2f, 1.2f);
+            inst.transform.position = new Vector2(2f, 0f);
+            inst.transform.localScale = new Vector3(0.8f, 0.8f, 0.8f);
             currentDefender = inst;
         } else
         {
-            myAttack.gameObject.transform.position = new Vector2(4f, 0f);
+            myAttack.gameObject.transform.position = new Vector2(2f, 0f);
+            myAttack.transform.localScale = new Vector3(0.8f, 0.8f, 0.8f);
             var inst = Instantiate(player1Defense);
-            inst.transform.position = new Vector2(-4f, 0f);
-            inst.transform.localScale = new Vector3(1.2f, 1.2f, 1.2f);
+            inst.transform.position = new Vector2(-2f, 0f);
+            inst.transform.localScale = new Vector3(0.8f, 0.8f, 0.8f);
             currentDefender = inst;
         }
 
@@ -642,20 +769,43 @@ public bool rollPhase = true;
 
     public void ApplyDamage(int defenderDMGReceived, int attackerDMGReceived = 0)
     {
+        p1Anim.Play("Idle");
+        p2Anim.Play("Damaged");
+
+        if (attackerDMGReceived > 0)
+        {
+            dmgText.text += "\nDmg Returned: " + attackerDMGReceived;
+            if (currentTurn == 1)
+            {
+                p1Anim.Play("Damaged");
+            } else
+            {
+                p2Anim.Play("Damaged");
+            }
+        }
+
         if(currentTurn == 1)
         {
             p2Life -= defenderDMGReceived;
             p2LifeText.text = p2Life + " HP";
             p1Life -= attackerDMGReceived;
             p1LifeText.text = p1Life + " HP";
-
+            if(defenderDMGReceived>0)
+                p2Anim.Play("Damaged");
         } else
         {
             p1Life -= defenderDMGReceived;
             p1LifeText.text = p1Life + " HP";
             p2Life -= attackerDMGReceived;
             p2LifeText.text = p2Life + " HP";
+            if (defenderDMGReceived > 0)
+                p1Anim.Play("Damaged");
         }
+
+        p1LifeBar.value = (float)p1Life / 50.0f;
+        p2LifeBar.value = (float)p2Life / 50.0f;
+
+        checkForGame();
 
         endTurnButton.SetActive(true);
     }
@@ -675,14 +825,14 @@ public bool rollPhase = true;
             if (currentTurn == 1)
             {
                 var newDice = Instantiate(player1Dice);
-                newDice.transform.position = new Vector2(initialDicePos.position.x + (3.2f * i), initialDicePos.position.y);
+                newDice.transform.position = new Vector2(initialDicePos.position.x + (3.0f * i), initialDicePos.position.y);
                 newDice.GetComponent<SpriteRenderer>().sortingOrder = 8;
                 currentDice[i] = newDice;
             }
             else
             {
                 var newDice = Instantiate(player2Dice);
-                newDice.transform.position = new Vector2(initialDicePos.position.x + (3.2f * i), initialDicePos.position.y);
+                newDice.transform.position = new Vector2(initialDicePos.position.x + (3.0f * i), initialDicePos.position.y);
                 newDice.GetComponent<SpriteRenderer>().sortingOrder = 8;
                 currentDice[i] = newDice;
             }
@@ -708,14 +858,14 @@ public bool rollPhase = true;
             if (currentTurn == 1)
             {
                 var newDice = Instantiate(player1Dice);
-                newDice.transform.position = new Vector2(initialDicePos.position.x + (3.2f * i), initialDicePos.position.y);
+                newDice.transform.position = new Vector2(initialDicePos.position.x + (3.0f * i), initialDicePos.position.y);
                 newDice.GetComponent<SpriteRenderer>().sortingOrder = 8;
                 currentDice[i] = newDice;
             }
             else
             {
                 var newDice = Instantiate(player2Dice);
-                newDice.transform.position = new Vector2(initialDicePos.position.x + (3.2f * i), initialDicePos.position.y);
+                newDice.transform.position = new Vector2(initialDicePos.position.x + (3.0f * i), initialDicePos.position.y);
                 newDice.GetComponent<SpriteRenderer>().sortingOrder = 8;
                 currentDice[i] = newDice;
             }
@@ -741,14 +891,14 @@ public bool rollPhase = true;
             if (currentTurn == 2)
             {
                 var newDice = Instantiate(player1Dice);
-                newDice.transform.position = new Vector2(initialDicePos.position.x + (3.2f * i), initialDicePos.position.y);
+                newDice.transform.position = new Vector2(initialDicePos.position.x + (3.0f * i), initialDicePos.position.y);
                 newDice.GetComponent<SpriteRenderer>().sortingOrder = 8;
                 currentDice[i] = newDice;
             }
             else
             {
                 var newDice = Instantiate(player2Dice);
-                newDice.transform.position = new Vector2(initialDicePos.position.x + (3.2f * i), initialDicePos.position.y);
+                newDice.transform.position = new Vector2(initialDicePos.position.x + (3.0f * i), initialDicePos.position.y);
                 newDice.GetComponent<SpriteRenderer>().sortingOrder = 8;
                 currentDice[i] = newDice;
             }
@@ -767,5 +917,52 @@ public bool rollPhase = true;
         }
 
         currentDice = new Dice[5];
+    }
+
+    void destroyCurrentAttacks()
+    {
+        for (int i = 0; i < currentAttacks.Length; i++)
+        {
+            Destroy(currentAttacks[i].gameObject);
+        }
+    }
+
+    public GameObject explosion;
+    public GameObject GameOverScreen;
+    public TextMeshProUGUI WinnerText;
+    void checkForGame()
+    {
+        if(p1Life<=0&& p2Life <= 0)
+        {
+            mainPanel.SetActive(false);
+            destroyCurrentDice();
+            destroyCurrentAttacks();
+            if (currentDefender != null)
+                Destroy(currentDefender.gameObject);
+            WinnerText.text = "Draw";
+            GameOverScreen.SetActive(true);
+            Instantiate(explosion, p1Anim.gameObject.transform);
+            Instantiate(explosion, p2Anim.gameObject.transform);
+        } else if(p1Life <= 0)
+        {
+            mainPanel.SetActive(false);
+            destroyCurrentDice();
+            destroyCurrentAttacks();
+            if (currentDefender != null)
+                Destroy(currentDefender.gameObject);
+            WinnerText.text = "Ninja Wins";
+            GameOverScreen.SetActive(true);
+            Instantiate(explosion, p1Anim.gameObject.transform);
+        } else if(p2Life <= 0)
+        {
+            mainPanel.SetActive(false);
+            destroyCurrentDice();
+            destroyCurrentAttacks();
+            if (currentDefender != null)
+                Destroy(currentDefender.gameObject);
+            WinnerText.text = "Gunslinger Wins";
+            GameOverScreen.SetActive(true);
+            Instantiate(explosion, p2Anim.gameObject.transform);
+        }
     }
 }

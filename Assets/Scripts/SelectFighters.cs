@@ -11,12 +11,12 @@ public class SelectFighters : MonoBehaviour
     {
         if (!p1selected)
         {
-            //PlayerPrefs.SetInt("P1char", ID);
+            PlayerPrefs.SetInt("P1char", ID);
             p1selected = true;
         }
         else
         {
-            //PlayerPrefs.SetInt("P2char", ID);
+            PlayerPrefs.SetInt("P2char", ID);
             btnFight.SetActive(true);
         }
     }
